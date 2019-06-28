@@ -8,6 +8,7 @@ trait Functions {
 
     /**
      * Process a whitelist if available
+     * @param Symfony\Component\Console\Input\InputOption $input
      */
     public function processWhiteList($input) {
         # inline
@@ -25,6 +26,21 @@ trait Functions {
 
             $this->whiteList = $whiteListArray;
         }
+    }
+
+    /**
+     * Process the path to write file to
+     * @param Symfony\Component\Console\Input\InputOption $input
+     * @param Symfony\Component\Console\Style\SymfonyStyle $io
+     */
+    public function processFileOutput($input, $io) {
+        # check if likers media post is required
+        if ($input->getOption("file_output") == "") {
+            $io->error("file_output required");
+            exit();
+        }
+
+        $this->fileOutput = $input->getOption("file_output");
     }
 
     /**
@@ -166,5 +182,23 @@ trait Functions {
                 exit();
             }
         }
+    }
+
+    /**
+     * Gets the list of users who liked a post
+     * @param \InstagramAPI\Instagram $ig $ig 
+     * @param Symfony\Component\Console\Input\InputOption $input
+     * @param Symfony\Component\Console\Output\OutputOption $ouput
+     * @param string $mediaId
+     * 
+     * @return array 
+     */
+    public function getMediaLikers($ig, $input, $output, $mediaId) {
+        $likers = $ig->media->getLikers($mediaId)->getUsers();      
+        $usersArray = array();
+        foreach($likers as $key) {
+            $usersArray[$key->getPk()] = $key->getUsername();
+        }
+        return $usersArray;
     }
 }

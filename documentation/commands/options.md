@@ -14,3 +14,11 @@ These options can be used with just the notifications command.
 | Option     | Description     |
 | ---        | ---             |
 | `--log_to_file` | It logs incoming notifications to the json file e.g ``` --log_to_file= true```|
+
+## Select
+These options can be used with just the notifications command.
+
+| Option     | Description     |
+| ---        | ---             |
+| `--likers_media_code` | The unique code of the post, it can be found in the url e.g ``` --likers_media_code= BzQvOGxAdRg```|
+| `--file_output` | Path to spit the json output e.g ``` --file_output= users.txt```|

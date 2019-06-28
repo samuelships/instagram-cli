@@ -35,7 +35,8 @@ class UnfollowNonFollowersCommand extends Command
             ->setDefinition(
                 new InputDefinition([
                     new InputOption('white_list', 'w', InputOption::VALUE_OPTIONAL),
-                    new InputOption('white_list_from_file', 'W', InputOption::VALUE_OPTIONAL)
+                    new InputOption('white_list_from_file', 'W', InputOption::VALUE_OPTIONAL),
+                    new inputArgument('hello', InputArgument::OPTIONAL, "yo")
                 ])
                 
             );

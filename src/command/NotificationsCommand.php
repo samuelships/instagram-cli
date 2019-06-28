@@ -126,7 +126,7 @@ class NotificationsCommand extends Command
             }
 
             $output->writeln($push->getMessage());
-            exec("cd src/command && sWavPlayer sound.mp3");
+            // exec("cd src/command && sWavPlayer sound.mp3");
         });
 
         # like notifications
