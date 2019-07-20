@@ -72,7 +72,7 @@ class UnfollowNonFollowersCommand extends Command
 
         // TRY TO LOGIN
         $output->writeln("Loggin In...");
-        $ig = new \InstagramAPI\Instagram(false, false);
+        $ig = new \InstagramAPI\Instagram(true, false);
 
         try {
             $ig->login($this->username, $this->password);

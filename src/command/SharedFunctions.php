@@ -34,13 +34,47 @@ trait Functions {
      * @param Symfony\Component\Console\Style\SymfonyStyle $io
      */
     public function processFileOutput($input, $io) {
-        # check if likers media post is required
+        # check if path is present
         if ($input->getOption("file_output") == "") {
             $io->error("file_output required");
             exit();
         }
-
         $this->fileOutput = $input->getOption("file_output");
+    }
+
+    /**
+     * Process the path to dump liked media
+     * @param Symfony\Component\Console\Input\InputOption $input
+     * @param Symfony\Component\Console\Style\SymfonyStyle $io
+     */
+    public function processTrackLikedMedia($input, $io) {
+        # check if path is present
+        if ($input->getOption("track_liked_media") != "") {
+            $this->trackLikedMedia = $input->getOption("track_liked_media");
+        }
+        
+    }
+
+    /**
+     * Appends liked media to file
+     * @param string $mediaId MediaId to append
+     * * @param string $file File to write to
+     */
+    public function appendLikedMedia($mediaId, $file) {
+        # check if file already exists
+        if (!file_exists($file)) {
+            echo "file does not exists...";
+            $mediaIdArray = array("$mediaId");
+            $fileOpen = fopen($file, "w");
+            fwrite($fileOpen, json_encode($mediaIdArray));  
+
+        }else {
+            echo "file exists...";
+            $mediaIdArray = json_decode(file_get_contents($file), TRUE);
+            $fileOpen = fopen($file, "w");
+            array_push($mediaIdArray, $mediaId);
+            fwrite($fileOpen, json_encode($mediaIdArray));
+        }
     }
 
     /**
@@ -151,6 +185,81 @@ trait Functions {
     }
 
     /**
+     * Gets the list of users who you are following (object)
+     * @param \InstagramAPI\Instagram $ig $ig 
+     * @param Symfony\Component\Console\Input\InputOption $input
+     * @param Symfony\Component\Console\Output\OutputOption $ouput
+     * 
+     * @return array 
+     */
+    public function getFollowingRaw($ig, $input, $output, $username) {
+        $io = new SymfonyStyle($input, $output);
+        $io->title("Getting $username's Following...");
+
+        // Generate user id
+        $userId = $ig->people->getUserIdForName($username);
+        $output->writeln("Getting number of following...");
+        
+        $followingCount = $ig->people->getInfoById($userId)->getUser()->getFollowingCount();
+
+        $output->writeln("<fg=green>Following - $followingCount</>");
+
+        // Generate a random rank token.
+        $rankToken = \InstagramAPI\Signatures::generateUUID();
+
+        $output->writeln("\nGetting all $followingCount following...");
+        $progressBar = new ProgressBar($output, 100);
+        $followingArray = [];
+        $maxId = null;
+        
+
+        do {
+            $following = $ig->people->getFollowing($userId,$rankToken, null, $maxId);
+            $users = $following->getUsers();
+
+            foreach($users as $u) {
+                array_push($followingArray, $u);
+            }
+        
+
+            $maxId = $following->getNextMaxId();      
+      
+        }while($following->getNextMaxId() !== null);
+
+        $output->writeln("<fg=green>All Following Retrieved</>");
+        return $followingArray;
+    }
+
+    /**
+     * Gets the list of media of a user
+     * @param \InstagramAPI\Instagram $ig 
+     * @param Symfony\Component\Console\Input\InputOption $input
+     * @param Symfony\Component\Console\Output\OutputOption $ouput
+     * @param string $username Username to get followers of
+     * 
+     * @return array 
+     */
+    public function getUserMedia($ig, $input, $output, $username) {
+        $userId = $ig->people->getUserIdForName($username);
+        
+        $nextMaxId = null;
+        $feedArray = array();
+        do {
+            $feed = $ig->timeline->getUserFeed($userId, $nextMaxId);
+            $items = $feed->getItems();
+            foreach($items as $item) {
+                array_push($feedArray, $item);
+                
+            }
+
+            $nextMaxId = $feed->getNextMaxId();
+        }
+        while ($nextMaxId != null);
+
+        return $feedArray;
+    }
+
+    /**
      * Unfollows an array of users
      * @param \InstagramAPI\Instagram $ig $ig 
      * @param Symfony\Component\Console\Input\InputOption $input
@@ -170,13 +279,18 @@ trait Functions {
                     $output->writeln("$c/".count($users));
                     $output->writeln("<fg=yellow>Sipped White List User {$username}</> \n");
                 }else {
+                    # pause at 20
+                    if ($c % 20 == 0) {
+                        $output->writeln("<fg=yellow>Taking a deep sleep \n");
+                        sleep(60);
+                    }
                     $output->writeln("$c/".count($users));
                     $ig->people->unfollow($id);
                     $output->writeln("<fg=green>Unfollowed {$username}</> \n");
                 }
 
                 $c++;
-                sleep(.5);
+                sleep(3);
             }catch(\Exception $e) {
                 $output->writeln('<error>Something Went Wrong</error>');
                 exit();
@@ -195,10 +309,7 @@ trait Functions {
      */
     public function getMediaLikers($ig, $input, $output, $mediaId) {
         $likers = $ig->media->getLikers($mediaId)->getUsers();      
-        $usersArray = array();
-        foreach($likers as $key) {
-            $usersArray[$key->getPk()] = $key->getUsername();
-        }
-        return $usersArray;
+        return $likers;
     }
+
 }

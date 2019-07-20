@@ -21,4 +21,14 @@ These options can be used with just the notifications command.
 | Option     | Description     |
 | ---        | ---             |
 | `--likers_media_code` | The unique code of the post, it can be found in the url e.g ``` --likers_media_code= BzQvOGxAdRg```|
-| `--file_output` | Path to spit the json output e.g ``` --file_output= users.txt```|
+| `--not_in_likers` | Not in likers filter e.g ``` --not_in_likers= yes```|
+| `--not_in_likers_media_code` | Media to pick likers from e.g ``` --not_in_likers_media_code= all```|
+
+## Follow
+These options can be used with just the follow command.
+
+| Option     | Description     |
+| ---        | ---             |
+| `--user_list_file` | List of users to follow e.g ``` --user_list_file= users.txt```|
+| `--pause_after` | Number of follows to pause after e.g ``` --pause_after= 5```|
+| `--like_media` | Number of user's media to like after being followed e.g ``` --like_media= 3```|

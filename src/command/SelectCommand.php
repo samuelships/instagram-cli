@@ -25,11 +25,22 @@ class SelectCommand extends Command
     /** @var WhiteList */
     protected $whiteList = array();
 
-    /** @var likersMediaCode */
+    /** @var LikersMediaCode */
     protected $likersMediaCode;
 
-    /** @var fileOutput */
+    /** @var FileOutput */
     protected $fileOutput;
+
+    /** @var SelectType */
+    protected $selectType = "";
+
+    /** @var NotInLikers */
+    protected $notInLikers = "";
+
+    /** @var NotInLikersMediaCode */
+    protected $notInLikersMediaCode = "";
+
+    
 
     // the name of the command (the part after "bin/console")
     protected static $defaultName = 'select';
@@ -37,12 +48,20 @@ class SelectCommand extends Command
     protected function configure()
     {
         $this->setDescription('Selects users - followers, following, likers.')
-            ->setHelp('This commands selects objects - users, likers which can be used for purely analytics, unfollowed or followed')
+            ->setHelp('This command selects objects - users, likers which can be used for purely analytics, unfollowed or followed')
             ->setDefinition(
                 new InputDefinition([
-                    new InputArgument("type", InputArgument::OPTIONAL, "Type of select - likers, followers, following", "likers"),
-                    new InputOption("likers_media_code", "l", InputOption::VALUE_OPTIONAL, "Media code of "),
-                    new InputOption("file_output", "o", InputOption::VALUE_OPTIONAL, "Output of the file")
+                    new InputArgument("type", InputArgument::OPTIONAL, "Type of select - likers, followers, following"),
+
+                    # general options
+                    new InputOption("file_output", "o", InputOption::VALUE_OPTIONAL, "Output of the file"),
+
+                    # select likers options
+                    new InputOption("likers_media_code", "l", InputOption::VALUE_OPTIONAL, "Media code of of post to select likers from"),
+
+                    # select following options
+                    new InputOption("not_in_likers", "", InputOption::VALUE_OPTIONAL, "Select users not in likers"),
+                    new InputOption("not_in_likers_media_code", "", InputOption::VALUE_OPTIONAL, "Media code of post to select not in likers from - pass all to select all your posts"),
                 ])
                 
             );
@@ -50,33 +69,40 @@ class SelectCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {   
-         
-        //GET USERNAME AND PASSWORD
-        
-        $io = new SymfonyStyle($input, $output);
-
-        $io->ask('What is your username', "", function ($username) {
-            $this->username = $username;
-        });
-
-        $io->askHidden('What is your password', function ($password) {
-            $this->password = $password;
-        });
-
-
-        // CHECK FOR REQUIRED OPTIONS  
-        if ($this->username == null || $this->password == null) {
-            $output->writeln('<error>Username or Password Required</error>');
+        // SELECT TYPE VALIDATION
+        $types = ["likers", "following"];
+        if (!in_array($input->getArgument("type"), $types)) {
+            $output->writeln("<error>Select type must be one of - ". implode("," , $types) ."</error>");
             exit();
         }
-        
-    
+
+        # set select type
+        $this->selectType = $input->getArgument("type");
+
 
         // PROCESS OPTIONS
         $io = new SymfonyStyle($input, $output);
         $this->processLikersMediaCode($input, $io);
         $this->processFileOutput($input, $io);
+        $this->processNotInLikers($input, $io);
+         
+        //GET USERNAME AND PASSWORD
+        $io = new SymfonyStyle($input, $output);
+        $io->ask('What is your username', "", function ($username) {
+            $this->username = $username;
+        });
+        $io->askHidden('What is your password', function ($password) {
+            $this->password = $password;
+        });
 
+
+        // VALIDATION 
+        if ($this->username == null || $this->password == null) {
+            $output->writeln('<error>Username or Password Required</error>');
+            exit();
+        }
+        
+        
         // TRY TO LOGIN
         $output->writeln("Loggin In...");
         $ig = new \InstagramAPI\Instagram(false, false);
@@ -91,17 +117,74 @@ class SelectCommand extends Command
         $output->writeln('<fg=green>Logged In</>');
         
         // LIKERS 
-        # convert likers_media_code to a media Id
-        $mediaId = $this->getIdFromCode($this->likersMediaCode);
+        if ($this->selectType == "likers") {
+            echo "Selecting likers.. \n";
+            # convert likers_media_code to a media Id
+            $mediaId = $this->getIdFromCode($this->likersMediaCode);
+            
+            # use getLikers function to get the likers of the media
+            $users = $this->getMediaLikers($ig, $input, $output, $mediaId);
+            
+        }
 
-        # use getLikers function to get the likers of the media
-        $users = $this->getMediaLikers($ig, $input, $output, $mediaId);
+        // FOLLOWING 
+        if ($this->selectType == "following") {
+            echo "following";
+            $users = $this->getFollowingRaw($ig, $input, $output, $this->username);
+          
+        }
+
+
+        // GENERAL FILTERS
+        $usersArray = array();
         
-        # filter list with follower count, following count, has profile picture etc // implement later
-        
-        # write output to a file
+        # get info needed for filtering...
+        $info = [
+            "likers" => [
+                "all" => []
+            ]
+        ];
+
+        # 1. --no_in_likers
+        if ($this->notInLikers) {
+            if ($this->notInLikersMediaCode == "all") {
+                # get all my media
+                $media = $this->getUserMedia($ig, $input, $output, $this->username); 
+
+                foreach($media as $m) {
+                    # get all likers and put in array
+                    $likers = $this->getMediaLikers($ig, $input, $output, $m->getId());
+                    foreach($likers as $liker) {
+                        $info["likers"]["all"][$liker->getPk()] = $liker->getUsername();
+                    }
+                }  
+            }
+        }
+ 
+
+        foreach($users as $user) {
+            $addStatus = 1;
+
+            # custom filters --not_in_likers --not_in_likers_media_code all
+
+            # 1. --not_in_likers
+            if ($this->notInLikers) {
+                if (isset($info["likers"]["all"][$user->getPk()])) {
+                    $addStatus = 0;
+                }
+            }
+
+            if ($addStatus) {
+                $usersArray[$user->getPk()] = $user->getUsername();
+            }
+            
+        }
+
+    
+        // WRITE TO FILE
         $file = fopen($this->fileOutput, "w");
-        fwrite($file, json_encode($users));
+        fwrite($file, json_encode($usersArray));
+        $output->writeln("<fg=green>DONE</>");
 
     }
 
@@ -119,6 +202,27 @@ class SelectCommand extends Command
             exit();
         }
         $this->likersMediaCode = $input->getOption("likers_media_code");
+    }
+
+    /**
+     * Process not in likers filter
+     * @param Symfony\Component\Console\Input\InputOption $input
+     * @param Symfony\Component\Console\Style\SymfonyStyle $io
+     */
+    public function processNotInLikers($input, $io) {
+        
+        if ($input->getOption("not_in_likers")) {
+           
+            # check if not_in_likers_media_code is absent
+            if (!$input->getOption("not_in_likers_media_code")) {
+                $io->error("not_in_likers_media_code required");
+                exit();
+            }
+
+            $this->notInLikers = $input->getOption("not_in_likers");
+            $this->notInLikersMediaCode = $input->getOption("not_in_likers_media_code");
+        }
+        
     }
 
     /**
