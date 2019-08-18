@@ -30,8 +30,8 @@ For more, hit the [docs!](documentation)
 # To Do
 Here's where we are so far.
 - [x] Unfollow nonfollowers.
-- [ ] Unfollow from a list of users.
-- [ ] Select users based on query parameters, this selected list can be used to follow or unfollow the selected users.
+- [x] Unfollow from a list of users.
+- [x] Select users based on query parameters, this selected list can be used to follow or unfollow the selected users.
 - [x] Add white list option.
 - [x] Add a realtime notification system to listen to incoming notifications - like a user just followed you.
 - [ ] Add Clone followers.
