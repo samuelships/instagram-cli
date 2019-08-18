@@ -54,15 +54,14 @@ class UnfollowNonFollowersCommand extends Command
         $loginHandler = new LoginCore();
         $loginHandler->getUserCredentials($input, $output);
         $loginHandler->validateCredentials($input, $output);
-        $loginHandler->login($input, $output);
         $ig = $loginHandler->login($input, $output);
 
         // GET ALL MY FOLLOWERS
-        $followersArray = $this->getFollowers($ig, $input, $output, $this->username);
+        $followersArray = $this->getFollowers($ig, $input, $output, $loginHandler->username);
         
 
         // GET ALL MY FOLLOWING
-        $followingArray = $this->getFollowing($ig, $input, $output, $this->username);
+        $followingArray = $this->getFollowing($ig, $input, $output, $loginHandler->username);
       
 
         // GET THOSE NOT FOLLOWING YOU
