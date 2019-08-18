@@ -46,43 +46,18 @@ class NotificationsCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {   
-        //GET USERNAME AND PASSWORD
-        
-        $io = new SymfonyStyle($input, $output);
-
-        $io->ask('What is your username', "", function ($username) {
-            $this->username = $username;
-        });
-
-        $io->askHidden('What is your password', function ($password) {
-            $this->password = $password;
-        });
-
         
 
-        // CHECK FOR REQUIRED OPTIONS 
-        if ($this->username == null || $this->password == null) {
-            $output->writeln('<error>Username or Password Required</error>');
-            exit();
-        }
-
-        
 
         // PROCESS OPTIONS
         $this->processLogToFile($input);
 
-        // TRY TO LOGIN
-        $output->writeln("Loggin In...");
-        $ig = new \InstagramAPI\Instagram(false, false);
-
-        try {
-            $ig->login($this->username, $this->password);
-        } catch (\Exception $e) {
-            $output->writeln('<error>Something Went Wrong</error>');
-            exit();
-        }
-
-        $output->writeln('<fg=green>Logged In</>');
+        // LOGIN
+        $loginHandler = new LoginCore();
+        $loginHandler->getUserCredentials($input, $output);
+        $loginHandler->validateCredentials($input, $output);
+        $loginHandler->login($input, $output);
+        $ig = $loginHandler->login($input, $output);
 
         $loop = \React\EventLoop\Factory::create();
         $debug = false;

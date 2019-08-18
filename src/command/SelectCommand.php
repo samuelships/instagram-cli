@@ -2,6 +2,7 @@
 namespace App\Command;
 
 use \App\Command\Functions;
+use \App\Other\LoginCore;
 
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -59,7 +60,7 @@ class SelectCommand extends Command
                     # select likers options
                     new InputOption("likers_media_code", "l", InputOption::VALUE_OPTIONAL, "Media code of of post to select likers from"),
 
-                    # select following options
+                    # filtering options
                     new InputOption("not_in_likers", "", InputOption::VALUE_OPTIONAL, "Select users not in likers"),
                     new InputOption("not_in_likers_media_code", "", InputOption::VALUE_OPTIONAL, "Media code of post to select not in likers from - pass all to select all your posts"),
                 ])
@@ -86,34 +87,15 @@ class SelectCommand extends Command
         $this->processFileOutput($input, $io);
         $this->processNotInLikers($input, $io);
          
-        //GET USERNAME AND PASSWORD
-        $io = new SymfonyStyle($input, $output);
-        $io->ask('What is your username', "", function ($username) {
-            $this->username = $username;
-        });
-        $io->askHidden('What is your password', function ($password) {
-            $this->password = $password;
-        });
-
-
-        // VALIDATION 
-        if ($this->username == null || $this->password == null) {
-            $output->writeln('<error>Username or Password Required</error>');
-            exit();
-        }
+        // LOGIN
+        $loginHandler = new LoginCore();
+        $loginHandler->getUserCredentials($input, $output);
+        $loginHandler->validateCredentials($input, $output);
+        $loginHandler->login($input, $output);
+        $ig = $loginHandler->login($input, $output);
         
         
-        // TRY TO LOGIN
-        $output->writeln("Loggin In...");
-        $ig = new \InstagramAPI\Instagram(false, false);
-
-        try {
-            $ig->login($this->username, $this->password);
-        } catch (\Exception $e) {
-            $output->writeln('<error>Something Went Wrong</error>');
-            exit();
-        }
-
+    
         $output->writeln('<fg=green>Logged In</>');
         
         // LIKERS 
@@ -129,9 +111,8 @@ class SelectCommand extends Command
 
         // FOLLOWING 
         if ($this->selectType == "following") {
-            echo "following";
-            $users = $this->getFollowingRaw($ig, $input, $output, $this->username);
-          
+            echo "Selecting following.. \n";
+            $users = $this->getFollowingRaw($ig, $input, $output, $this->username); 
         }
 
 
@@ -145,8 +126,10 @@ class SelectCommand extends Command
             ]
         ];
 
-        # 1. --no_in_likers
+        # 1. --not_in_likers
         if ($this->notInLikers) {
+
+            # select all media code
             if ($this->notInLikersMediaCode == "all") {
                 # get all my media
                 $media = $this->getUserMedia($ig, $input, $output, $this->username); 
@@ -159,6 +142,8 @@ class SelectCommand extends Command
                     }
                 }  
             }
+
+
         }
  
 
