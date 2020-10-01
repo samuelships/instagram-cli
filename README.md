@@ -1,5 +1,5 @@
 # Instagram Cli Tool
-A php cli based program that perform handy repetitve instagram actions. It directly talks to the instagram server without the need for an api. 
+A php cli based program that performs handy repetitve instagram actions. It directly talks to the instagram server without the need for an api. 
 
 # Motivation
 I definatley needed to stop wasting time on the gram! My actions were repeatitive so i automated it 🤖.
